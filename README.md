@@ -23,3 +23,28 @@ The function returns a PowerShell custom object with the following properties:
 * PasswordLastSet (datetime): The date and time the password wlast set.
 * LastLogonDate (datetime): The date and time the computer lalogged on to the domain.
 
+## *Examples*
+
+Get-ComputerInfoFromIpAddress -IPAddress 10.0.0.73
+```
+Name            : CW2003
+DNSHostName     : cw2003.contoso.local
+OperatingSystem : Windows Server 2003
+PasswordLastSet : 2/25/2023
+LastLogonDate   : 2/25/2023
+```
+
+'10.0.0.83', '10.0.0.85' | Get-ComputerInfoFromIpAddress
+```
+Name            : CDC2
+DNSHostName     : CDC2.contoso.local
+OperatingSystem : Windows Server 2022 Standard
+PasswordLastSet : 2/21/2023
+LastLogonDate   : 2/21/2023
+
+Name            : WIN10
+DNSHostName     : win10.contoso.local
+OperatingSystem : Windows 10 Enterprise LTSC
+PasswordLastSet : 1/26/2023
+LastLogonDate   : 2/19/2023
+```
