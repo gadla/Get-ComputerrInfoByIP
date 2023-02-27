@@ -173,5 +173,13 @@ function Get-ComputerInfoFromIpAddress {
     }
 }
 
-Get-ComputerInfoFromIpAddress -IPAddress
-'10.0.0.83', '10.0.0.85' | Get-ComputerInfoFromIpAddress
+<# Example usage
+    Get-ComputerInfoFromIpAddress -IPAddress '10.0.0.83'
+
+    '10.0.0.83', '10.0.0.85' | Get-ComputerInfoFromIpAddress
+    
+    Get-Content -Path .\Computers.txt | Get-ComputerInfoFromIpAddress
+
+    **Using the Import-Csv command to import a CSV file with a column named "IPAddress".**
+    Import-Csv -Path  .\Computers.csv | Get-ComputerInfoFromIpAddress 
+#>
