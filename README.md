@@ -4,7 +4,7 @@ It can handle piped input and returns only valid IP addresses.
 The script doesn't use WMI or CIM cmdlets and can retrieve information even if the computer is offline. 
 The script uses the DNS server to retrieve the computer name from the IP address and then retrieves the computer information from Active Directory. 
 If a reverse lookup zone exists in Active Directory, it will not be used. 
-The script loads the DNS records from the DNS server and creates a hashtable with the IP address as the key and the computer name as the value.
+The script loads the DNS records from the forward lookup zone and creates a hashtable with the IP address as the key and the computer name as the value.
 
 ## *Here are some examples of the script in action:*
 
