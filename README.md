@@ -1,4 +1,4 @@
-# *Get-ComputerrInfoByIP*
+# *Get-ComputerInfoByIP*
 The *Get-ComputerInfoByIP* PowerShell script retrieves computer information from Active Directory using one or more IP addresses. 
 It can handle piped input and returns only valid IP addresses. 
 The script doesn't use WMI or CIM cmdlets and can retrieve information even if the computer is offline. 
