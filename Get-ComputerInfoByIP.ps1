@@ -18,12 +18,10 @@ function Get-DNSHashTable {
 
         .EXAMPLE
          Get-DNSHashTable -DNSZoneName "example.com"
-
          Retrieves a hash table of all A records in the "example.com" DNS zone.
 
-        .EXAMPLE
+         .EXAMPLE
          Get-DNSHashTable -DNSZoneName "example.com" -DNSServer "dns.example.com"
-        
          Retrieves a hash table of all A records in the "example.com" DNS zone from the DSN server "dns.example.com".
 
         .EXAMPLE
@@ -33,35 +31,36 @@ function Get-DNSHashTable {
         .OUTPUTS
         The function returns a hash table with the IP addresses as keys and computer names as values.
 
-
         .NOTES
         Author: Gadi Lev-Ari
         Last Updated: 25/02/2023
+
+        .LINK
+        https://github.com/gadla/Get-ComputerrInfoByIP
     #>
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$false)]
         [ValidatePattern("^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$")]
         [string]$DNSZoneName = (Get-ADDomain).DNSRoot,
+
         [string]$DNSServer = [string](Get-ADDomainController -Discover -NextClosestSite).hostname
     )
 
     $records = Get-DnsServerResourceRecord -ZoneName $DNSZoneName -ComputerName $DNSServer -RRType A | Where-Object { $_.HostName -ne "@" }
     $records = $records | Where-Object {($_.HostName -ne 'ForestDnsZones') -and ($_.HostName -ne 'DomainDnsZones')}
-    
     $hash = @{}
-    
     foreach ($record in $records) {
         $name = $record.HostName
         $ip = $record.RecordData.Ipv4Address.IPAddressToString
-
         if ($hash.ContainsKey($ip)) {
             $hash[$ip] += ",$name"
         } else {
             $hash[$ip] = $name
         }
     }
-    
+
     Write-Output $hash
 }
 
@@ -69,14 +68,14 @@ function Get-ComputerInfoFromIpAddress {
     <#
         .SYNOPSIS
          This function retrieves computer information from Active Directory using an IP address.
-        
-        .DESCRIPTION
+
+         .DESCRIPTION
          This function receives an IP address of the computer and retrieves the computer information from Active Directory.
          The function can receive multiple IP addresses, can be piped from another command, and will only return valid IP addresses.
-        
-        .PARAMETER IPAddress
+
+         .PARAMETER IPAddress
          The IP address of the computer which we would like to query. Can receive multiple IP addresses and be piped from another command.
-        
+
         .EXAMPLE
          Get-ComputerInfoFromIpAddress -IPAddress '10.0.0.83'
          Returns a PowerShell custom object with the name of the computer, the DNS host name and the operatingsystem
@@ -86,7 +85,7 @@ function Get-ComputerInfoFromIpAddress {
          OperatingSystem : Windows Server 2022 Standard
          PasswordLastSet : 2/21/2023
          LastLogonDate   : 2/21/2023
-        
+
         .EXAMPLE
          '10.0.0.83', '10.0.0.85' | Get-ComputerInfoFromIpAddress
          Returns a PowerShell custom object for each IP address, excluding invalid IP addresses.
@@ -111,10 +110,11 @@ function Get-ComputerInfoFromIpAddress {
          - PasswordLastSet (datetime): The date and time the password was last set.
          - LastLogonDate (datetime): The date and time the computer last logged on to the domain.
     #>
+
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, 
-            Position = 0, 
+        [Parameter(Mandatory = $true,
+            Position = 0,
             ValueFromPipeline = $true,
             ValueFromPipelineByPropertyName = $true)]
         [ValidateScript({
@@ -127,7 +127,6 @@ function Get-ComputerInfoFromIpAddress {
     )
 
     #Requires -Modules ActiveDirectory
-    
     Begin {
         $DNSHashTable = Get-DNSHashTable
     }
@@ -139,7 +138,6 @@ function Get-ComputerInfoFromIpAddress {
 
         # Load A  records into an array in memory
         $DNSHashTable = Get-DNSHashTable
-
         foreach ($ip in $IPAddress) {
             $ComputerName = $dnsHashTable[$ip]
             if (-not $ComputerName) {
@@ -157,12 +155,21 @@ function Get-ComputerInfoFromIpAddress {
                     $computer = $null
                 }
                 if ($computer) {
+                    $DnsHostName = 'N/A'
+                    $OperatingSystem = 'N/A'
+                    $PasswordLastSet = 'N/A'
+                    $LastLogonDate = 'N/A'
+                    if(-not($null -eq $computer.DNSHostName)) { $DnsHostName = $computer.DnsHostName }
+                    if(-not($null -eq $computer.OperatingSystem)) { $OperatingSystem = $computer.OperatingSystem }
+                    if(-not($null -eq $computer.pwdlastset)) { $PasswordLastSet = ([datetime]::FromFileTimeUtc($computer.pwdlastset)).ToShortDateString() }
+                    if(-not($null -eq $computer.LastLogonDate)) { $LastLogonDate = ($computer.lastlogondate).ToShortDateString() }
+
                     $result = [PSCustomObject]@{
                         Name            = $computer.Name
-                        DNSHostName     = $computer.DNSHostName
-                        OperatingSystem = $computer.OperatingSystem
-                        PasswordLastSet = ([datetime]::FromFileTimeUtc($computer.pwdlastset)).ToShortDateString()
-                        LastLogonDate   = ($computer.lastlogondate).ToShortDateString()
+                        DNSHostName     = $DnsHostName
+                        OperatingSystem = $OperatingSystem
+                        PasswordLastSet = $PasswordLastSet
+                        LastLogonDate   = $LastLogonDate
                         }
                     Write-Output $result
                 } else {
@@ -173,13 +180,12 @@ function Get-ComputerInfoFromIpAddress {
     }
 }
 
+ 
+
 <# Example usage
     Get-ComputerInfoFromIpAddress -IPAddress '10.0.0.83'
-
     '10.0.0.83', '10.0.0.85' | Get-ComputerInfoFromIpAddress
-    
     Get-Content -Path .\Computers.txt | Get-ComputerInfoFromIpAddress
-
     **Using the Import-Csv command to import a CSV file with a column named "IPAddress".**
-    Import-Csv -Path  .\Computers.csv | Get-ComputerInfoFromIpAddress 
+    Import-Csv -Path  .\Computers.csv | Get-ComputerInfoFromIpAddress
 #>
