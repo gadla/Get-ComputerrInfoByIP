@@ -41,7 +41,7 @@ function Get-DNSHashTable {
 
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$false)]
+        [Parameter(Mandatory = $false)]
         [ValidatePattern("^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$")]
         [string]$DNSZoneName = (Get-ADDomain).DNSRoot,
 
@@ -49,14 +49,15 @@ function Get-DNSHashTable {
     )
 
     $records = Get-DnsServerResourceRecord -ZoneName $DNSZoneName -ComputerName $DNSServer -RRType A | Where-Object { $_.HostName -ne "@" }
-    $records = $records | Where-Object {($_.HostName -ne 'ForestDnsZones') -and ($_.HostName -ne 'DomainDnsZones')}
+    $records = $records | Where-Object { ($_.HostName -ne 'ForestDnsZones') -and ($_.HostName -ne 'DomainDnsZones') }
     $hash = @{}
     foreach ($record in $records) {
         $name = $record.HostName
         $ip = $record.RecordData.Ipv4Address.IPAddressToString
         if ($hash.ContainsKey($ip)) {
             $hash[$ip] += ",$name"
-        } else {
+        }
+        else {
             $hash[$ip] = $name
         }
     }
@@ -129,6 +130,7 @@ function Get-ComputerInfoFromIpAddress {
     #Requires -Modules ActiveDirectory
     Begin {
         $DNSHashTable = Get-DNSHashTable
+        $counter = 0
     }
     process {
         # Ensure the Active Directory PowerShell module is loaded
@@ -139,19 +141,31 @@ function Get-ComputerInfoFromIpAddress {
         # Load A  records into an array in memory
         $DNSHashTable = Get-DNSHashTable
         foreach ($ip in $IPAddress) {
+            $counter++
+            write-progress -Activity "Processing IP address $counter of $($IPAddress.count)" -Status "Processing $ip"
             $ComputerName = $dnsHashTable[$ip]
             if (-not $ComputerName) {
                 Write-Warning "Could not resolve $ip"
+                $result = [PSCustomObject]@{
+                    IP              = $ip
+                    Name            = 'N/A'
+                    DNSHostName     = ''
+                    OperatingSystem = ''
+                    PasswordLastSet = ''
+                    LastLogonDate   = ''
+                }
+                Write-Output $result
                 continue
             }
-            if($ComputerName.contains(',')) {
+            if ($ComputerName.contains(',')) {
                 Write-Verbose "The IP provided has more that one record: $ComputerName"
                 $ComputerName = $ComputerName.split(',')
             }
-            foreach($entry in $computerName) {
+            foreach ($entry in $computerName) {
                 try {
                     $computer = Get-ADComputer -Identity $entry -Properties OperatingSystem, pwdlastset, lastlogondate -ErrorAction SilentlyContinue
-                } catch {
+                }
+                catch {
                     $computer = $null
                 }
                 if ($computer) {
@@ -159,20 +173,31 @@ function Get-ComputerInfoFromIpAddress {
                     $OperatingSystem = 'N/A'
                     $PasswordLastSet = 'N/A'
                     $LastLogonDate = 'N/A'
-                    if(-not($null -eq $computer.DNSHostName)) { $DnsHostName = $computer.DnsHostName }
-                    if(-not($null -eq $computer.OperatingSystem)) { $OperatingSystem = $computer.OperatingSystem }
-                    if(-not($null -eq $computer.pwdlastset)) { $PasswordLastSet = ([datetime]::FromFileTimeUtc($computer.pwdlastset)).ToShortDateString() }
-                    if(-not($null -eq $computer.LastLogonDate)) { $LastLogonDate = ($computer.lastlogondate).ToShortDateString() }
+                    if (-not($null -eq $computer.DNSHostName)) { $DnsHostName = $computer.DnsHostName }
+                    if (-not($null -eq $computer.OperatingSystem)) { $OperatingSystem = $computer.OperatingSystem }
+                    if (-not($null -eq $computer.pwdlastset)) { $PasswordLastSet = ([datetime]::FromFileTimeUtc($computer.pwdlastset)).ToShortDateString() }
+                    if (-not($null -eq $computer.LastLogonDate)) { $LastLogonDate = ($computer.lastlogondate).ToShortDateString() }
 
                     $result = [PSCustomObject]@{
+                        IP              = $ip
                         Name            = $computer.Name
                         DNSHostName     = $DnsHostName
                         OperatingSystem = $OperatingSystem
                         PasswordLastSet = $PasswordLastSet
                         LastLogonDate   = $LastLogonDate
-                        }
+                    }
                     Write-Output $result
-                } else {
+                }
+                else {
+                    $result = [PSCustomObject]@{
+                        IP              = $ip
+                        Name            = 'N/A'
+                        DNSHostName     = ''
+                        OperatingSystem = ''
+                        PasswordLastSet = ''
+                        LastLogonDate   = ''
+                    }
+                    Write-Output $result
                     Write-Warning "Could not find computer with the name of $entry in Active Directory"
                 }
             }
