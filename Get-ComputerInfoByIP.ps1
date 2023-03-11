@@ -131,6 +131,8 @@ function Get-ComputerInfoFromIpAddress {
     Begin {
         $DNSHashTable = Get-DNSHashTable
         $counter = 0
+        # Load A records into an array in memory
+        $DNSHashTable = Get-DNSHashTable
     }
     process {
         # Ensure the Active Directory PowerShell module is loaded
@@ -138,8 +140,7 @@ function Get-ComputerInfoFromIpAddress {
             Import-Module ActiveDirectory
         }
 
-        # Load A  records into an array in memory
-        $DNSHashTable = Get-DNSHashTable
+
         foreach ($ip in $IPAddress) {
             $counter++
             write-progress -Activity "Processing IP address $counter of $($IPAddress.count)" -Status "Processing $ip"
