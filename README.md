@@ -108,4 +108,5 @@ The function returns a PowerShell custom object with the following properties:
 - OperatingSystem (string): The operating system of the computer.
 - PasswordLastSet (datetime): The date and time the password was last set.
 - LastLogonDate (datetime): The date and time the computer last logged on to the domain.
+- 
 
